@@ -13,7 +13,22 @@ type Dialog = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null
 export function CustomersPage() {
   const banking = useBanking()
   const [dialog, setDialog] = useState<Dialog>(null)
-  const { page, pageCount, visible, setPage } = usePagination(banking.customers)
+  const [query, setQuery] = useState('')
+  const trimmedQuery = query.trim()
+
+  const filtered =
+    trimmedQuery === ''
+      ? banking.customers
+      : banking.customers.filter((customer) => {
+          const q = trimmedQuery.toLowerCase()
+          const firstName = customer.firstName.toLowerCase()
+          const lastName = customer.lastName.toLowerCase()
+          const fullName = `${customer.firstName} ${customer.lastName}`.toLowerCase()
+          const email = customer.email.toLowerCase()
+          return firstName.includes(q) || lastName.includes(q) || fullName.includes(q) || email.includes(q)
+        })
+
+  const { page, pageCount, visible, setPage } = usePagination(filtered)
 
   const submit = (draft: CustomerDraft) => {
     if (dialog?.mode === 'edit') banking.updateCustomer(dialog.customer.id, draft)
@@ -24,6 +39,18 @@ export function CustomersPage() {
   return (
     <>
       <PageHeader title="Customers" actionLabel="Add customer" onAction={() => setDialog({ mode: 'create' })} />
+
+      <div className="field">
+        <label htmlFor="customer-search">Search customers</label>
+        <input
+          id="customer-search"
+          value={query}
+          onChange={(event) => {
+            setPage(1)
+            setQuery(event.target.value)
+          }}
+        />
+      </div>
 
       <div className="card">
         <table aria-label="Customers">
@@ -39,7 +66,9 @@ export function CustomersPage() {
             {visible.length === 0 && (
               <tr>
                 <td className="empty" colSpan={4}>
-                  No customers yet.
+                  {banking.customers.length === 0
+                    ? 'No customers yet.'
+                    : `No customers match "${trimmedQuery}"`}
                 </td>
               </tr>
             )}

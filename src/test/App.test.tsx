@@ -79,6 +79,49 @@ describe('customers', () => {
     expect(customerRow(/Grace Hopper/)).toBeInTheDocument()
   })
 
+  it('filters customers by name via the search box', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await addCustomer(user, GRACE)
+
+    await user.type(screen.getByLabelText('Search customers'), 'grace')
+
+    expect(customerRow(/Grace Hopper/)).toBeInTheDocument()
+    expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument()
+  })
+
+  it('filters customers by email case-insensitively', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+
+    await user.type(screen.getByLabelText('Search customers'), 'ADA@EXAMPLE')
+
+    expect(customerRow(/Ada Lovelace/)).toBeInTheDocument()
+    expect(screen.queryByText('Grace Hopper')).not.toBeInTheDocument()
+  })
+
+  it('shows a no-match message for an unmatched query', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await addCustomer(user, GRACE)
+
+    await user.type(screen.getByLabelText('Search customers'), 'zzz')
+
+    expect(screen.getByText('No customers match "zzz"')).toBeInTheDocument()
+  })
+
+  it('clearing the search query restores all customers', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await addCustomer(user, GRACE)
+
+    await user.type(screen.getByLabelText('Search customers'), 'grace')
+    await user.clear(screen.getByLabelText('Search customers'))
+
+    expect(customerRow(/Ada Lovelace/)).toBeInTheDocument()
+    expect(customerRow(/Grace Hopper/)).toBeInTheDocument()
+  })
+
   it('edits a customer from the row action', async () => {
     const { user } = renderApp()
     await addCustomer(user, ADA)
