@@ -3,6 +3,7 @@ import type { Route } from '../lib/useHashRoute'
 const NAV: { route: Route; icon: string; label: string }[] = [
   { route: 'customers', icon: '\u{1F464}', label: 'Customers' },
   { route: 'accounts', icon: '\u{1F4B3}', label: 'Accounts' },
+  { route: 'transactions', icon: '\u{1F4B8}', label: 'Transactions' },
 ]
 
 export function Sidebar({ current }: { current: Route }) {

@@ -170,3 +170,151 @@ describe('accounts', () => {
     expect(() => store.deleteAccount(store.emptyState(), 'acc_404')).toThrow(StoreError)
   })
 })
+
+describe('transactions', () => {
+  it('records deposit then withdrawal and updates balance (100 + 50.25 - 20.10 = 130.15)', () => {
+    let state = store.emptyState()
+    const customerState = store.createCustomer(state, ADA)
+    state = customerState
+    const customerId = store.listCustomers(state)[0].id
+
+    state = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 100,
+      status: 'ACTIVE',
+    })
+
+    const accountId = store.listAccounts(state)[0].id
+
+    state = store.recordTransaction(state, {
+      accountId,
+      type: 'DEPOSIT',
+      amount: 50.25,
+      description: '',
+    })
+
+    state = store.recordTransaction(state, {
+      accountId,
+      type: 'WITHDRAWAL',
+      amount: 20.1,
+      description: '',
+    })
+
+    expect(store.listTransactions(state).map((t) => t.id)).toEqual(['txn_1', 'txn_2'])
+    expect(store.getAccount(state, accountId)?.balance).toBe(130.15)
+  })
+
+  it('throws and does not mutate state when account id is unknown', () => {
+    const before = store.emptyState()
+    expect(() =>
+      store.recordTransaction(before, {
+        accountId: 'acc_nope',
+        type: 'DEPOSIT',
+        amount: 1,
+        description: '',
+      }),
+    ).toThrow('No account with id acc_nope')
+
+    expect(store.listTransactions(before)).toHaveLength(0)
+  })
+
+  it('throws and does not mutate state when amount is not greater than zero', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 10,
+      status: 'ACTIVE',
+    })
+    const accountId = store.listAccounts(next)[0].id
+
+    const before = next
+    expect(() =>
+      store.recordTransaction(before, {
+        accountId,
+        type: 'DEPOSIT',
+        amount: 0,
+        description: '',
+      }),
+    ).toThrow('Amount must be greater than zero')
+
+    expect(store.getAccount(before, accountId)?.balance).toBe(10)
+    expect(store.listTransactions(before)).toHaveLength(0)
+  })
+
+  it('throws and does not mutate state when account is not active', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 10,
+      status: 'FROZEN',
+    })
+    const accountId = store.listAccounts(next)[0].id
+
+    const before = next
+    expect(() =>
+      store.recordTransaction(before, {
+        accountId,
+        type: 'DEPOSIT',
+        amount: 5,
+        description: '',
+      }),
+    ).toThrow('Account ACC-1 is not active')
+
+    expect(store.getAccount(before, accountId)?.balance).toBe(10)
+    expect(store.listTransactions(before)).toHaveLength(0)
+  })
+
+  it('throws and does not mutate state when withdrawal is larger than balance', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 10,
+      status: 'ACTIVE',
+    })
+    const accountId = store.listAccounts(next)[0].id
+
+    const before = next
+    expect(() =>
+      store.recordTransaction(before, {
+        accountId,
+        type: 'WITHDRAWAL',
+        amount: 20,
+        description: '',
+      }),
+    ).toThrow('Insufficient funds in ACC-1')
+
+    expect(store.getAccount(before, accountId)?.balance).toBe(10)
+    expect(store.listTransactions(before)).toHaveLength(0)
+  })
+
+  it("deleting an account removes its transactions", () => {
+    let state = store.emptyState()
+    state = store.createCustomer(state, ADA)
+    const customerId = store.listCustomers(state)[0].id
+
+    state = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 10,
+      status: 'ACTIVE',
+    })
+    const accountId = store.listAccounts(state)[0].id
+
+    state = store.recordTransaction(state, {
+      accountId,
+      type: 'DEPOSIT',
+      amount: 5,
+      description: '',
+    })
+
+    expect(store.listTransactions(state)).toHaveLength(1)
+
+    state = store.deleteAccount(state, accountId)
+
+    expect(store.listTransactions(state)).toHaveLength(0)
+  })
+})

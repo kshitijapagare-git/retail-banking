@@ -72,3 +72,28 @@ export const ACC = {
   balance: '250.5',
   status: 'ACTIVE',
 }
+
+export const TXN = {
+  accountNumber: 'ACC-1001',
+  type: 'DEPOSIT' as const,
+  amount: '10.5',
+  description: 'Paycheck',
+}
+
+export async function addTransaction(
+  user: User,
+  transaction: { accountNumber: string; type: 'DEPOSIT' | 'WITHDRAWAL'; amount: string; description?: string },
+) {
+  await user.click(screen.getByRole('button', { name: '+ Record transaction' }))
+  await user.selectOptions(screen.getByLabelText('Account'), transaction.accountNumber)
+  await user.selectOptions(screen.getByLabelText('Type'), transaction.type)
+  await user.type(screen.getByLabelText('Amount'), transaction.amount)
+  if (transaction.description !== undefined) {
+    await user.type(screen.getByLabelText('Description'), transaction.description)
+  }
+  await user.click(screen.getByRole('button', { name: 'Record transaction' }))
+}
+
+export function transactionRow(name: RegExp) {
+  return within(screen.getByRole('table', { name: 'Transactions' })).getByRole('row', { name })
+}

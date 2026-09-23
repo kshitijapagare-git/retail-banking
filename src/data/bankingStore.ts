@@ -1,10 +1,11 @@
 import { nextId } from '../lib/id'
-import type { Account, AccountDraft, Customer, CustomerDraft } from '../types'
+import type { Account, AccountDraft, Customer, CustomerDraft, Transaction, TransactionDraft } from '../types'
 import * as repo from './repository'
 
 export interface BankingState {
   customers: repo.Table<Customer>
   accounts: repo.Table<Account>
+  transactions: repo.Table<Transaction>
 }
 
 export class StoreError extends Error {
@@ -15,7 +16,7 @@ export class StoreError extends Error {
 }
 
 export function emptyState(): BankingState {
-  return { customers: [], accounts: [] }
+  return { customers: [], accounts: [], transactions: [] }
 }
 
 /* ---------- Customers ---------- */
@@ -67,7 +68,11 @@ export function updateAccount(state: BankingState, id: string, patch: Partial<Ac
 
 export function deleteAccount(state: BankingState, id: string): BankingState {
   requireAccount(state, id)
-  return { ...state, accounts: repo.remove(state.accounts, id) }
+  return {
+    ...state,
+    accounts: repo.remove(state.accounts, id),
+    transactions: repo.remove(state.transactions, id),
+  }
 }
 
 /* ---------- FK guards ---------- */
@@ -82,4 +87,31 @@ function requireAccount(state: BankingState, id: string): Account {
   const account = repo.get(state.accounts, id)
   if (!account) throw new StoreError(`No account with id ${id}`)
   return account
+}
+
+/* ---------- Transactions ---------- */
+
+export function listTransactions(state: BankingState): Transaction[] {
+  return repo.list(state.transactions)
+}
+
+export function recordTransaction(state: BankingState, draft: TransactionDraft): BankingState {
+  const account = requireAccount(state, draft.accountId)
+
+  if (draft.amount <= 0) throw new StoreError('Amount must be greater than zero')
+
+  if (account.status !== 'ACTIVE') throw new StoreError(`Account ${account.accountNumber} is not active`)
+
+  const delta = draft.type === 'DEPOSIT' ? draft.amount : -draft.amount
+  const newBalance = Math.round((account.balance + delta) * 100) / 100
+
+  if (draft.type === 'WITHDRAWAL' && newBalance < 0) throw new StoreError(`Insufficient funds in ${account.accountNumber}`)
+
+  const transaction: Transaction = { id: nextId('txn'), ...draft }
+
+  return {
+    ...state,
+    accounts: repo.replace(state.accounts, account.id, { balance: newBalance }),
+    transactions: repo.insert(state.transactions, transaction),
+  }
 }

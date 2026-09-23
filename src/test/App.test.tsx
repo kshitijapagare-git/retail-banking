@@ -7,10 +7,12 @@ import {
   accountRow,
   addAccount,
   addCustomer,
+  addTransaction,
   customerRow,
   gotoAccounts,
   gotoCustomers,
   renderApp,
+  transactionRow,
 } from './utils'
 
 describe('shell', () => {
@@ -173,5 +175,64 @@ describe('accounts', () => {
     await user.click(screen.getByRole('button', { name: 'Delete ACC-1001' }))
 
     expect(screen.getByText('No accounts yet.')).toBeInTheDocument()
+  })
+})
+
+describe('transactions', () => {
+  it('records a deposit on ACC-1001; ledger shows it and Accounts balance updates', async () => {
+    const { user } = renderApp()
+
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await addAccount(user, ACC)
+
+    await user.click(screen.getByRole('link', { name: /Transactions/ }))
+    expect(screen.getByRole('heading', { name: 'Transactions', level: 1 })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Record transaction' }))
+    await user.selectOptions(screen.getByLabelText('Account'), 'ACC-1001')
+    await user.selectOptions(screen.getByLabelText('Type'), 'DEPOSIT')
+    await user.type(screen.getByLabelText('Amount'), '50.25')
+    await user.click(screen.getByRole('button', { name: 'Record transaction' }))
+
+    const row = transactionRow(/ACC-1001/)
+    expect(within(row).getByText('DEPOSIT')).toBeInTheDocument()
+    expect(within(row).getByText('50.25')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: /Accounts/ }))
+    const account = accountRow(/ACC-1001/)
+    expect(within(account).getByText('300.75')).toBeInTheDocument()
+  })
+
+  it('shows insufficient funds error and keeps modal open for withdrawal larger than balance', async () => {
+    const { user } = renderApp()
+
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await addAccount(user, ACC)
+
+    await user.click(screen.getByRole('link', { name: /Transactions/ }))
+    await user.click(screen.getByRole('button', { name: 'Record transaction' }))
+
+    await user.selectOptions(screen.getByLabelText('Account'), 'ACC-1001')
+    await user.selectOptions(screen.getByLabelText('Type'), 'WITHDRAWAL')
+    await user.type(screen.getByLabelText('Amount'), '1000')
+    await user.click(screen.getByRole('button', { name: 'Record transaction' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Insufficient funds in ACC-1001')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('sidebar shows three links and aria-current behavior', () => {
+    renderApp()
+    expect(screen.getAllByRole('link')).toEqual(expect.any(Array))
+
+    const customersLink = screen.getByRole('link', { name: /Customers/ })
+    const accountsLink = screen.getByRole('link', { name: /Accounts/ })
+    const transactionsLink = screen.getByRole('link', { name: /Transactions/ })
+
+    expect(customersLink).toHaveAttribute('aria-current', 'page')
+    expect(accountsLink).not.toHaveAttribute('aria-current')
+    expect(transactionsLink).not.toHaveAttribute('aria-current')
   })
 })
