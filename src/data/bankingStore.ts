@@ -60,7 +60,10 @@ export function createAccount(state: BankingState, draft: AccountDraft): Banking
 }
 
 export function updateAccount(state: BankingState, id: string, patch: Partial<AccountDraft>): BankingState {
-  requireAccount(state, id)
+  const account = requireAccount(state, id)
+  if (account.status === 'CLOSED' && patch.balance !== undefined) {
+    throw new StoreError(`Account ${account.accountNumber} is closed`)
+  }
   if (patch.customerId !== undefined) requireCustomer(state, patch.customerId)
   return { ...state, accounts: repo.replace(state.accounts, id, patch) }
 }

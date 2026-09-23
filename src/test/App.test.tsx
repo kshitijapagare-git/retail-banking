@@ -117,6 +117,27 @@ describe('accounts', () => {
     expect(within(row).getByText('ACTIVE')).toBeInTheDocument()
   })
 
+  it('offers all statuses in the status dropdown in order and defaults to ACTIVE', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await user.click(screen.getByRole('button', { name: '+ Add account' }))
+
+    const options = within(screen.getByLabelText('Status')).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual(['ACTIVE', 'DORMANT', 'FROZEN', 'CLOSED'])
+    expect(screen.getByLabelText('Status')).toHaveValue('ACTIVE')
+  })
+
+  it("preselects the current status when editing an account", async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await addAccount(user, { ...ACC, status: 'FROZEN' })
+
+    await user.click(screen.getByRole('button', { name: 'Edit ACC-1001' }))
+    expect(screen.getByLabelText('Status')).toHaveValue('FROZEN')
+  })
+
   it('offers every customer in the owner dropdown', async () => {
     const { user } = renderApp()
     await addCustomer(user, ADA)
@@ -141,8 +162,7 @@ describe('accounts', () => {
     await user.click(screen.getByRole('button', { name: 'Edit ACC-1001' }))
     await user.clear(screen.getByLabelText('Balance'))
     await user.type(screen.getByLabelText('Balance'), '900')
-    await user.clear(screen.getByLabelText('Status'))
-    await user.type(screen.getByLabelText('Status'), 'FROZEN')
+    await user.selectOptions(screen.getByLabelText('Status'), 'FROZEN')
     await user.click(screen.getByRole('button', { name: 'Save account' }))
 
     const row = accountRow(/ACC-1001/)

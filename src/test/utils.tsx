@@ -54,7 +54,7 @@ export async function addAccount(
   await user.type(screen.getByLabelText('Account number'), account.accountNumber)
   await user.selectOptions(screen.getByLabelText('Customer'), account.customerName)
   await user.type(screen.getByLabelText('Balance'), account.balance)
-  await user.type(screen.getByLabelText('Status'), account.status)
+  await user.selectOptions(screen.getByLabelText('Status'), account.status)
   await user.click(screen.getByRole('button', { name: 'Add account' }))
 }
 

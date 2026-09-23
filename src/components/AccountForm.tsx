@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from 'react'
-import type { Account, AccountDraft, Customer } from '../types'
+import type { Account, AccountDraft, AccountStatus, Customer } from '../types'
+import { ACCOUNT_STATUSES } from '../types'
 
 interface FormValues {
   accountNumber: string
   customerId: string
   balance: string
-  status: string
+  status: AccountStatus
 }
 
-const EMPTY: FormValues = { accountNumber: '', customerId: '', balance: '', status: '' }
+const EMPTY: FormValues = { accountNumber: '', customerId: '', balance: '', status: 'ACTIVE' }
 
 function toValues(account: Account | null): FormValues {
   if (!account) return EMPTY
@@ -34,7 +35,7 @@ export function AccountForm({
   const [values, setValues] = useState<FormValues>(() => toValues(editing))
 
   const set = (field: keyof FormValues) => (event: { target: { value: string } }) =>
-    setValues((current) => ({ ...current, [field]: event.target.value }))
+    setValues((current) => ({ ...current, [field]: event.target.value as FormValues[typeof field] }))
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -72,7 +73,13 @@ export function AccountForm({
 
       <div className="field">
         <label htmlFor="account-status">Status</label>
-        <input id="account-status" value={values.status} onChange={set('status')} />
+        <select id="account-status" value={values.status} onChange={(event) => set('status')({ target: { value: event.target.value } })}>
+          {ACCOUNT_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="modal-actions">

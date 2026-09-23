@@ -145,6 +145,40 @@ describe('accounts', () => {
     })
   })
 
+  it('rejects balance changes when the current account status is CLOSED', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 10,
+      status: 'CLOSED',
+    })
+    const accountId = store.listAccounts(next)[0].id
+
+    expect(() => store.updateAccount(next, accountId, { balance: 99 })).toThrow('Account ACC-1 is closed')
+  })
+
+  it('allows reopening a CLOSED account and then updating its balance', () => {
+    const { state, customerId } = withAda()
+    let next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 10,
+      status: 'CLOSED',
+    })
+    const accountId = store.listAccounts(next)[0].id
+
+    next = store.updateAccount(next, accountId, { status: 'ACTIVE' })
+    next = store.updateAccount(next, accountId, { balance: 99 })
+
+    expect(store.getAccount(next, accountId)).toMatchObject({
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 99,
+      status: 'ACTIVE',
+    })
+  })
+
   it('lists accounts in insertion order', () => {
     const { state, customerId } = withAda()
     let next = store.createAccount(state, { accountNumber: 'A-1', customerId, balance: 1, status: 'ACTIVE' })
