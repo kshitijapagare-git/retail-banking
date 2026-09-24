@@ -31,6 +31,8 @@ export function AccountsPage() {
             <tr>
               <th scope="col">Account number</th>
               <th scope="col">Customer</th>
+              <th scope="col">Account type</th>
+              <th scope="col">Branch</th>
               <th scope="col">Balance</th>
               <th scope="col">Status</th>
               <th scope="col">Actions</th>
@@ -39,17 +41,21 @@ export function AccountsPage() {
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td className="empty" colSpan={5}>
+                <td className="empty" colSpan={7}>
                   No accounts yet.
                 </td>
               </tr>
             )}
             {visible.map((account) => {
               const owner = banking.getCustomer(account.customerId)
+              const accountType = banking.getAccountType(account.accountTypeId)
+              const branch = banking.getBranch(account.branchId)
               return (
                 <tr key={account.id}>
                   <td>{account.accountNumber}</td>
                   <td>{owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown'}</td>
+                  <td>{accountType?.name ?? 'Unknown'}</td>
+                  <td>{branch?.name ?? 'Unknown'}</td>
                   <td>{account.balance}</td>
                   <td>{account.status}</td>
                   <td>
@@ -73,6 +79,8 @@ export function AccountsPage() {
           <AccountForm
             editing={dialog.mode === 'edit' ? dialog.account : null}
             customers={banking.customers}
+            accountTypes={banking.accountTypes}
+            branches={banking.branches}
             onSubmit={submit}
             onCancel={() => setDialog(null)}
           />

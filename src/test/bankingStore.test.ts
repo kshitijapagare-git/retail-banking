@@ -11,6 +11,20 @@ function withAda(): { state: BankingState; customerId: string } {
   return { state, customerId: store.listCustomers(state)[0].id }
 }
 
+function withAdaAccountRefs(): {
+  state: BankingState
+  customerId: string
+  accountTypeId: string
+  branchId: string
+} {
+  const { state: withCustomer, customerId } = withAda()
+  const withType = store.createAccountType(withCustomer, { name: 'Checking' })
+  const accountTypeId = store.listAccountTypes(withType)[0].id
+  const withBranch = store.createBranch(withType, { name: 'Downtown' })
+  const branchId = store.listBranches(withBranch)[0].id
+  return { state: withBranch, customerId, accountTypeId, branchId }
+}
+
 beforeEach(() => resetIds())
 
 describe('customers', () => {
@@ -74,12 +88,15 @@ describe('customers', () => {
 
 describe('accounts', () => {
   it('creates an account linked to an existing customer', () => {
-    const { state, customerId } = withAda()
+    const { state, customerId, accountTypeId, branchId } = withAdaAccountRefs()
     const next = store.createAccount(state, {
       accountNumber: 'ACC-1',
       customerId,
+      accountTypeId,
+      branchId,
       balance: 250.5,
       status: 'ACTIVE',
+      openedOn: new Date(),
     })
     const accounts = store.listAccounts(next)
 
@@ -93,19 +110,25 @@ describe('accounts', () => {
       store.createAccount(store.emptyState(), {
         accountNumber: 'ACC-1',
         customerId: 'ghost',
+        accountTypeId: 'ghost-type',
+        branchId: 'ghost-branch',
         balance: 0,
         status: 'ACTIVE',
+        openedOn: new Date(),
       }),
     ).toThrow(/No customer with id ghost/)
   })
 
   it('enforces the foreign key when reassigning an account', () => {
-    const { state, customerId } = withAda()
+    const { state, customerId, accountTypeId, branchId } = withAdaAccountRefs()
     const next = store.createAccount(state, {
       accountNumber: 'ACC-1',
       customerId,
+      accountTypeId,
+      branchId,
       balance: 0,
       status: 'ACTIVE',
+      openedOn: new Date(),
     })
     const accountId = store.listAccounts(next)[0].id
 
@@ -113,12 +136,15 @@ describe('accounts', () => {
   })
 
   it('gets an account by id and returns undefined for a miss', () => {
-    const { state, customerId } = withAda()
+    const { state, customerId, accountTypeId, branchId } = withAdaAccountRefs()
     const next = store.createAccount(state, {
       accountNumber: 'ACC-1',
       customerId,
+      accountTypeId,
+      branchId,
       balance: 5,
       status: 'ACTIVE',
+      openedOn: new Date(),
     })
     const accountId = store.listAccounts(next)[0].id
 
@@ -127,12 +153,15 @@ describe('accounts', () => {
   })
 
   it('updates only the patched fields', () => {
-    const { state, customerId } = withAda()
+    const { state, customerId, accountTypeId, branchId } = withAdaAccountRefs()
     const next = store.createAccount(state, {
       accountNumber: 'ACC-1',
       customerId,
+      accountTypeId,
+      branchId,
       balance: 0,
       status: 'ACTIVE',
+      openedOn: new Date(),
     })
     const accountId = store.listAccounts(next)[0].id
     const updated = store.updateAccount(next, accountId, { balance: 99, status: 'FROZEN' })
@@ -146,20 +175,39 @@ describe('accounts', () => {
   })
 
   it('lists accounts in insertion order', () => {
-    const { state, customerId } = withAda()
-    let next = store.createAccount(state, { accountNumber: 'A-1', customerId, balance: 1, status: 'ACTIVE' })
-    next = store.createAccount(next, { accountNumber: 'A-2', customerId, balance: 2, status: 'ACTIVE' })
+    const { state, customerId, accountTypeId, branchId } = withAdaAccountRefs()
+    let next = store.createAccount(state, {
+      accountNumber: 'A-1',
+      customerId,
+      accountTypeId,
+      branchId,
+      balance: 1,
+      status: 'ACTIVE',
+      openedOn: new Date(),
+    })
+    next = store.createAccount(next, {
+      accountNumber: 'A-2',
+      customerId,
+      accountTypeId,
+      branchId,
+      balance: 2,
+      status: 'ACTIVE',
+      openedOn: new Date(),
+    })
 
     expect(store.listAccounts(next).map((a) => a.accountNumber)).toEqual(['A-1', 'A-2'])
   })
 
   it('deletes an account', () => {
-    const { state, customerId } = withAda()
+    const { state, customerId, accountTypeId, branchId } = withAdaAccountRefs()
     const next = store.createAccount(state, {
       accountNumber: 'ACC-1',
       customerId,
+      accountTypeId,
+      branchId,
       balance: 0,
       status: 'ACTIVE',
+      openedOn: new Date(),
     })
     const accountId = store.listAccounts(next)[0].id
 

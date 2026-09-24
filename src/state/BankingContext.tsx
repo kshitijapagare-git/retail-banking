@@ -1,13 +1,17 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import * as store from '../data/bankingStore'
 import type { BankingState } from '../data/bankingStore'
-import type { Account, AccountDraft, Customer, CustomerDraft } from '../types'
+import type { Account, AccountDraft, AccountType, Branch, Customer, CustomerDraft } from '../types'
 
 export interface BankingApi {
   customers: Customer[]
   accounts: Account[]
+  accountTypes: AccountType[]
+  branches: Branch[]
   getCustomer: (id: string) => Customer | undefined
   getAccount: (id: string) => Account | undefined
+  getAccountType: (id: string) => AccountType | undefined
+  getBranch: (id: string) => Branch | undefined
   createCustomer: (draft: CustomerDraft) => void
   updateCustomer: (id: string, patch: Partial<CustomerDraft>) => void
   deleteCustomer: (id: string) => void
@@ -31,8 +35,12 @@ export function BankingProvider({
     () => ({
       customers: store.listCustomers(state),
       accounts: store.listAccounts(state),
+      accountTypes: store.listAccountTypes(state),
+      branches: store.listBranches(state),
       getCustomer: (id) => store.getCustomer(state, id),
       getAccount: (id) => store.getAccount(state, id),
+      getAccountType: (id) => store.getAccountType(state, id),
+      getBranch: (id) => store.getBranch(state, id),
       createCustomer: (draft) => setState((s) => store.createCustomer(s, draft)),
       updateCustomer: (id, patch) => setState((s) => store.updateCustomer(s, id, patch)),
       deleteCustomer: (id) => setState((s) => store.deleteCustomer(s, id)),

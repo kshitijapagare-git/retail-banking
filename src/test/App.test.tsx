@@ -1,9 +1,14 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { startOfToday, toIsoDate } from '../lib/date'
 import {
   ACC,
   ADA,
+  CHECKING,
+  DOWNTOWN,
   GRACE,
+  SAVINGS,
+  UPTOWN,
   accountRow,
   addAccount,
   addCustomer,
@@ -11,7 +16,9 @@ import {
   gotoAccounts,
   gotoCustomers,
   renderApp,
+  renderAppWithState,
 } from './utils'
+import * as store from '../data/bankingStore'
 
 describe('shell', () => {
   it('lands on Customers with that nav item marked current', () => {
@@ -115,6 +122,8 @@ describe('accounts', () => {
     expect(within(row).getByText('Ada Lovelace')).toBeInTheDocument()
     expect(within(row).getByText('250.5')).toBeInTheDocument()
     expect(within(row).getByText('ACTIVE')).toBeInTheDocument()
+    expect(within(row).getByText('Checking')).toBeInTheDocument()
+    expect(within(row).getByText('Downtown')).toBeInTheDocument()
   })
 
   it('offers every customer in the owner dropdown', async () => {
@@ -132,6 +141,55 @@ describe('accounts', () => {
     ])
   })
 
+  it('offers every live account type in the account type dropdown', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await user.click(screen.getByRole('button', { name: '+ Add account' }))
+
+    const options = within(screen.getByLabelText('Account type')).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Select an account type',
+      CHECKING.name,
+      SAVINGS.name,
+    ])
+  })
+
+  it('offers every live branch in the branch dropdown', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await user.click(screen.getByRole('button', { name: '+ Add account' }))
+
+    const options = within(screen.getByLabelText('Branch')).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual(['Select a branch', DOWNTOWN.name, UPTOWN.name])
+  })
+
+  it('defaults status to ACTIVE and offers exactly the four statuses', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await user.click(screen.getByRole('button', { name: '+ Add account' }))
+
+    const statusSelect = screen.getByLabelText('Status')
+    expect(statusSelect).toHaveValue('ACTIVE')
+
+    const options = within(statusSelect).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual(['ACTIVE', 'DORMANT', 'FROZEN', 'CLOSED'])
+  })
+
+  it('defaults opened on to today and caps it there', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await user.click(screen.getByRole('button', { name: '+ Add account' }))
+
+    const today = toIsoDate(startOfToday())
+    const openedOn = screen.getByLabelText('Opened on')
+    expect(openedOn).toHaveValue(today)
+    expect(openedOn).toHaveAttribute('max', today)
+  })
+
   it('edits an account', async () => {
     const { user } = renderApp()
     await addCustomer(user, ADA)
@@ -141,8 +199,7 @@ describe('accounts', () => {
     await user.click(screen.getByRole('button', { name: 'Edit ACC-1001' }))
     await user.clear(screen.getByLabelText('Balance'))
     await user.type(screen.getByLabelText('Balance'), '900')
-    await user.clear(screen.getByLabelText('Status'))
-    await user.type(screen.getByLabelText('Status'), 'FROZEN')
+    await user.selectOptions(screen.getByLabelText('Status'), 'FROZEN')
     await user.click(screen.getByRole('button', { name: 'Save account' }))
 
     const row = accountRow(/ACC-1001/)
@@ -173,5 +230,33 @@ describe('accounts', () => {
     await user.click(screen.getByRole('button', { name: 'Delete ACC-1001' }))
 
     expect(screen.getByText('No accounts yet.')).toBeInTheDocument()
+  })
+
+  it('shows Unknown for a stale account type or branch reference', async () => {
+    const seeded = {
+      ...store.emptyState(),
+      customers: [{ id: 'cus_1', firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com', phone: '' }],
+      accountTypes: [CHECKING],
+      branches: [DOWNTOWN],
+      accounts: [
+        {
+          id: 'acc_1',
+          accountNumber: 'ACC-9000',
+          customerId: 'cus_1',
+          accountTypeId: 'missing-type',
+          branchId: 'missing-branch',
+          balance: 100,
+          status: 'ACTIVE',
+          openedOn: startOfToday(),
+        },
+      ],
+    }
+
+    const { user } = renderAppWithState(seeded)
+    await gotoAccounts(user)
+
+    const row = accountRow(/ACC-9000/)
+    const unknowns = within(row).getAllByText('Unknown')
+    expect(unknowns).toHaveLength(2)
   })
 })

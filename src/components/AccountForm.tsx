@@ -1,33 +1,57 @@
 import { useState, type FormEvent } from 'react'
-import type { Account, AccountDraft, Customer } from '../types'
+import type { Account, AccountDraft, AccountType, Branch, Customer } from '../types'
+import { CurrencyInput } from './CurrencyInput'
+import { DatePicker } from './DatePicker'
+import { Select } from './Select'
+import { startOfToday } from '../lib/date'
+
+const STATUS_OPTIONS = ['ACTIVE', 'DORMANT', 'FROZEN', 'CLOSED']
 
 interface FormValues {
   accountNumber: string
   customerId: string
-  balance: string
+  accountTypeId: string
+  branchId: string
+  balance: number
   status: string
+  openedOn: Date
 }
 
-const EMPTY: FormValues = { accountNumber: '', customerId: '', balance: '', status: '' }
-
 function toValues(account: Account | null): FormValues {
-  if (!account) return EMPTY
+  if (!account) {
+    return {
+      accountNumber: '',
+      customerId: '',
+      accountTypeId: '',
+      branchId: '',
+      balance: 0,
+      status: 'ACTIVE',
+      openedOn: startOfToday(),
+    }
+  }
   return {
     accountNumber: account.accountNumber,
     customerId: account.customerId,
-    balance: String(account.balance),
+    accountTypeId: account.accountTypeId,
+    branchId: account.branchId,
+    balance: account.balance,
     status: account.status,
+    openedOn: account.openedOn,
   }
 }
 
 export function AccountForm({
   editing,
   customers,
+  accountTypes,
+  branches,
   onSubmit,
   onCancel,
 }: {
   editing: Account | null
   customers: Customer[]
+  accountTypes: AccountType[]
+  branches: Branch[]
   onSubmit: (draft: AccountDraft) => void
   onCancel: () => void
 }) {
@@ -36,13 +60,19 @@ export function AccountForm({
   const set = (field: keyof FormValues) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [field]: event.target.value }))
 
+  const canSubmit = values.accountTypeId !== '' && values.branchId !== ''
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
+    if (!canSubmit) return
     onSubmit({
       accountNumber: values.accountNumber,
       customerId: values.customerId,
-      balance: Number(values.balance) || 0,
+      accountTypeId: values.accountTypeId,
+      branchId: values.branchId,
+      balance: values.balance,
       status: values.status,
+      openedOn: values.openedOn,
     })
   }
 
@@ -65,21 +95,52 @@ export function AccountForm({
         </select>
       </div>
 
-      <div className="field">
-        <label htmlFor="account-balance">Balance</label>
-        <input id="account-balance" type="number" step="0.01" value={values.balance} onChange={set('balance')} />
-      </div>
+      <Select
+        id="account-type"
+        label="Account type"
+        value={values.accountTypeId}
+        placeholder="Select an account type"
+        options={accountTypes.map((accountType) => ({ value: accountType.id, label: accountType.name }))}
+        onChange={(value) => setValues((current) => ({ ...current, accountTypeId: value }))}
+      />
 
-      <div className="field">
-        <label htmlFor="account-status">Status</label>
-        <input id="account-status" value={values.status} onChange={set('status')} />
-      </div>
+      <Select
+        id="account-branch"
+        label="Branch"
+        value={values.branchId}
+        placeholder="Select a branch"
+        options={branches.map((branch) => ({ value: branch.id, label: branch.name }))}
+        onChange={(value) => setValues((current) => ({ ...current, branchId: value }))}
+      />
+
+      <CurrencyInput
+        id="account-balance"
+        label="Balance"
+        value={values.balance}
+        onChange={(value) => setValues((current) => ({ ...current, balance: value }))}
+      />
+
+      <Select
+        id="account-status"
+        label="Status"
+        value={values.status}
+        options={STATUS_OPTIONS.map((status) => ({ value: status, label: status }))}
+        onChange={(value) => setValues((current) => ({ ...current, status: value }))}
+      />
+
+      <DatePicker
+        id="account-opened-on"
+        label="Opened on"
+        value={values.openedOn}
+        max={startOfToday()}
+        onChange={(value) => setValues((current) => ({ ...current, openedOn: value }))}
+      />
 
       <div className="modal-actions">
         <button type="button" className="btn-ghost" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="btn-primary">
+        <button type="submit" className="btn-primary" disabled={!canSubmit}>
           {editing ? 'Save account' : 'Add account'}
         </button>
       </div>
