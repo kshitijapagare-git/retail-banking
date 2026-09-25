@@ -29,12 +29,14 @@ export function getCustomer(state: BankingState, id: string): Customer | undefin
 }
 
 export function createCustomer(state: BankingState, draft: CustomerDraft): BankingState {
+  requireUniqueEmail(state, draft.email)
   const customer: Customer = { id: nextId('cus'), ...draft }
   return { ...state, customers: repo.insert(state.customers, customer) }
 }
 
 export function updateCustomer(state: BankingState, id: string, patch: Partial<CustomerDraft>): BankingState {
   requireCustomer(state, id)
+  if (patch.email !== undefined) requireUniqueEmail(state, patch.email, id)
   return { ...state, customers: repo.replace(state.customers, id, patch) }
 }
 
@@ -55,6 +57,7 @@ export function getAccount(state: BankingState, id: string): Account | undefined
 
 export function createAccount(state: BankingState, draft: AccountDraft): BankingState {
   requireCustomer(state, draft.customerId)
+  requireUniqueAccountNumber(state, draft.accountNumber)
   const account: Account = { id: nextId('acc'), ...draft }
   return { ...state, accounts: repo.insert(state.accounts, account) }
 }
@@ -62,6 +65,7 @@ export function createAccount(state: BankingState, draft: AccountDraft): Banking
 export function updateAccount(state: BankingState, id: string, patch: Partial<AccountDraft>): BankingState {
   requireAccount(state, id)
   if (patch.customerId !== undefined) requireCustomer(state, patch.customerId)
+  if (patch.accountNumber !== undefined) requireUniqueAccountNumber(state, patch.accountNumber, id)
   return { ...state, accounts: repo.replace(state.accounts, id, patch) }
 }
 
@@ -82,4 +86,18 @@ function requireAccount(state: BankingState, id: string): Account {
   const account = repo.get(state.accounts, id)
   if (!account) throw new StoreError(`No account with id ${id}`)
   return account
+}
+
+function requireUniqueEmail(state: BankingState, email: string, excludeId?: string): void {
+  const collision = repo
+    .list(state.customers)
+    .some((customer) => customer.id !== excludeId && customer.email.toLowerCase() === email.toLowerCase())
+  if (collision) throw new StoreError(`Email ${email} is already in use`)
+}
+
+function requireUniqueAccountNumber(state: BankingState, accountNumber: string, excludeId?: string): void {
+  const collision = repo
+    .list(state.accounts)
+    .some((account) => account.id !== excludeId && account.accountNumber === accountNumber)
+  if (collision) throw new StoreError(`Account number ${accountNumber} already exists`)
 }

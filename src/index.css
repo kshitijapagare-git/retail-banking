@@ -257,6 +257,13 @@ td {
   color: var(--muted);
 }
 
+.field-error {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #dc2626;
+}
+
 input,
 select {
   padding: 10px 12px;

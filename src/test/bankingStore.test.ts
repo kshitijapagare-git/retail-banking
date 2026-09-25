@@ -70,6 +70,36 @@ describe('customers', () => {
   it('rejects deleting an unknown customer', () => {
     expect(() => store.deleteCustomer(store.emptyState(), 'cus_404')).toThrow(StoreError)
   })
+
+  it('rejects creating a customer with a duplicate email', () => {
+    const { state } = withAda()
+    expect(() => store.createCustomer(state, { ...GRACE, email: 'ada@example.com' })).toThrow(
+      /Email ada@example.com is already in use/,
+    )
+  })
+
+  it('rejects creating a customer with a duplicate email in a different case', () => {
+    const { state } = withAda()
+    expect(() => store.createCustomer(state, { ...GRACE, email: 'ADA@EXAMPLE.COM' })).toThrow(StoreError)
+  })
+
+  it('rejects updating a customer to another customer email', () => {
+    const { state, customerId } = withAda()
+    const next = store.createCustomer(state, GRACE)
+    const graceId = store.listCustomers(next).find((c) => c.firstName === 'Grace')!.id
+
+    expect(() => store.updateCustomer(next, graceId, { email: 'ada@example.com' })).toThrow(
+      /Email ada@example.com is already in use/,
+    )
+    expect(customerId).toBeTruthy()
+  })
+
+  it('allows a customer to keep its own email on update', () => {
+    const { state, customerId } = withAda()
+    const next = store.updateCustomer(state, customerId, { email: 'ada@example.com', phone: '+1 555 0999' })
+
+    expect(store.getCustomer(next, customerId)).toMatchObject({ email: 'ada@example.com', phone: '+1 555 0999' })
+  })
 })
 
 describe('accounts', () => {
@@ -168,5 +198,39 @@ describe('accounts', () => {
 
   it('rejects deleting an unknown account', () => {
     expect(() => store.deleteAccount(store.emptyState(), 'acc_404')).toThrow(StoreError)
+  })
+
+  it('rejects creating an account with a duplicate account number', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+
+    expect(() =>
+      store.createAccount(next, { accountNumber: 'ACC-1', customerId, balance: 10, status: 'ACTIVE' }),
+    ).toThrow(/Account number ACC-1 already exists/)
+  })
+
+  it('rejects updating an account to another account number', () => {
+    const { state, customerId } = withAda()
+    let next = store.createAccount(state, { accountNumber: 'ACC-1', customerId, balance: 0, status: 'ACTIVE' })
+    next = store.createAccount(next, { accountNumber: 'ACC-2', customerId, balance: 0, status: 'ACTIVE' })
+    const secondId = store.listAccounts(next).find((a) => a.accountNumber === 'ACC-2')!.id
+
+    expect(() => store.updateAccount(next, secondId, { accountNumber: 'ACC-1' })).toThrow(
+      /Account number ACC-1 already exists/,
+    )
+  })
+
+  it('allows an account to keep its own number on update', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, { accountNumber: 'ACC-1', customerId, balance: 0, status: 'ACTIVE' })
+    const accountId = store.listAccounts(next)[0].id
+    const updated = store.updateAccount(next, accountId, { accountNumber: 'ACC-1', balance: 42 })
+
+    expect(store.getAccount(updated, accountId)).toMatchObject({ accountNumber: 'ACC-1', balance: 42 })
   })
 })

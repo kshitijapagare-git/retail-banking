@@ -102,6 +102,61 @@ describe('customers', () => {
 
     expect(screen.getByText('No customers yet.')).toBeInTheDocument()
   })
+
+  it('shows a message for every field when submitting an empty form, and keeps the dialog open', async () => {
+    const { user } = renderApp()
+
+    await user.click(screen.getByRole('button', { name: '+ Add customer' }))
+    await user.click(screen.getByRole('button', { name: 'Add customer' }))
+
+    expect(screen.getByText('First name is required')).toBeInTheDocument()
+    expect(screen.getByText('Last name is required')).toBeInTheDocument()
+    expect(screen.getByText('Enter a valid email address')).toBeInTheDocument()
+    expect(screen.getByText('Enter a valid phone number')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('marks an invalid email as aria-invalid and shows its message', async () => {
+    const { user } = renderApp()
+
+    await user.click(screen.getByRole('button', { name: '+ Add customer' }))
+    await user.type(screen.getByLabelText('First name'), 'Ada')
+    await user.type(screen.getByLabelText('Last name'), 'Lovelace')
+    await user.type(screen.getByLabelText('Email'), 'not-an-email')
+    await user.type(screen.getByLabelText('Phone'), '+1 555 0100')
+    await user.click(screen.getByRole('button', { name: 'Add customer' }))
+
+    expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('Enter a valid email address')).toBeInTheDocument()
+  })
+
+  it('shows a duplicate email alert and keeps the dialog open', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+
+    await user.click(screen.getByRole('button', { name: '+ Add customer' }))
+    await user.type(screen.getByLabelText('First name'), 'Charles')
+    await user.type(screen.getByLabelText('Last name'), 'Babbage')
+    await user.type(screen.getByLabelText('Email'), ADA.email)
+    await user.type(screen.getByLabelText('Phone'), '+1 555 0122')
+    await user.click(screen.getByRole('button', { name: 'Add customer' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Email ada@example.com is already in use')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('clears a field error once it is fixed', async () => {
+    const { user } = renderApp()
+
+    await user.click(screen.getByRole('button', { name: '+ Add customer' }))
+    await user.click(screen.getByRole('button', { name: 'Add customer' }))
+
+    expect(screen.getByText('First name is required')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('First name'), 'Ada')
+
+    expect(screen.queryByText('First name is required')).not.toBeInTheDocument()
+  })
 })
 
 describe('accounts', () => {

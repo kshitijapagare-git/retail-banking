@@ -33,11 +33,23 @@ export function BankingProvider({
       accounts: store.listAccounts(state),
       getCustomer: (id) => store.getCustomer(state, id),
       getAccount: (id) => store.getAccount(state, id),
-      createCustomer: (draft) => setState((s) => store.createCustomer(s, draft)),
-      updateCustomer: (id, patch) => setState((s) => store.updateCustomer(s, id, patch)),
+      createCustomer: (draft) => {
+        const next = store.createCustomer(state, draft)
+        setState(next)
+      },
+      updateCustomer: (id, patch) => {
+        const next = store.updateCustomer(state, id, patch)
+        setState(next)
+      },
       deleteCustomer: (id) => setState((s) => store.deleteCustomer(s, id)),
-      createAccount: (draft) => setState((s) => store.createAccount(s, draft)),
-      updateAccount: (id, patch) => setState((s) => store.updateAccount(s, id, patch)),
+      createAccount: (draft) => {
+        const next = store.createAccount(state, draft)
+        setState(next)
+      },
+      updateAccount: (id, patch) => {
+        const next = store.updateAccount(state, id, patch)
+        setState(next)
+      },
       deleteAccount: (id) => setState((s) => store.deleteAccount(s, id)),
     }),
     [state],
