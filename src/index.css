@@ -108,6 +108,21 @@ body {
   background: var(--accent-hover);
 }
 
+.btn-danger {
+  padding: 12px 20px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: #dc2626;
+  border: none;
+  border-radius: 8px;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
 .btn-ghost {
   padding: 12px 20px;
   font: inherit;

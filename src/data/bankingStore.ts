@@ -39,8 +39,25 @@ export function updateCustomer(state: BankingState, id: string, patch: Partial<C
 }
 
 export function deleteCustomer(state: BankingState, id: string): BankingState {
-  requireCustomer(state, id)
+  const customer = requireCustomer(state, id)
+  const owned = accountsForCustomer(state, id)
+  if (owned.length > 0) {
+    throw new StoreError(
+      `Customer ${customer.firstName} ${customer.lastName} still has ${owned.length} account(s)`,
+    )
+  }
   return { ...state, customers: repo.remove(state.customers, id) }
+}
+
+export function deleteCustomerWithAccounts(state: BankingState, id: string): BankingState {
+  requireCustomer(state, id)
+  const owned = accountsForCustomer(state, id)
+  let accounts = state.accounts
+  for (const account of owned) {
+    accounts = repo.remove(accounts, account.id)
+  }
+  const customers = repo.remove(state.customers, id)
+  return { ...state, customers, accounts }
 }
 
 /* ---------- Accounts ---------- */
@@ -51,6 +68,10 @@ export function listAccounts(state: BankingState): Account[] {
 
 export function getAccount(state: BankingState, id: string): Account | undefined {
   return repo.get(state.accounts, id)
+}
+
+export function accountsForCustomer(state: BankingState, customerId: string): Account[] {
+  return repo.list(state.accounts).filter((account) => account.customerId === customerId)
 }
 
 export function createAccount(state: BankingState, draft: AccountDraft): BankingState {

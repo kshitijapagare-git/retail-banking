@@ -3,12 +3,17 @@ import { CustomerForm } from '../components/CustomerForm'
 import { usePagination } from '../lib/usePagination'
 import { useBanking } from '../state/BankingContext'
 import type { Customer, CustomerDraft } from '../types'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Modal } from '../ui/Modal'
 import { PageHeader } from '../ui/PageHeader'
 import { Pagination } from '../ui/Pagination'
 import { RowActions } from '../ui/RowActions'
 
-type Dialog = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null
+type Dialog =
+  | { mode: 'create' }
+  | { mode: 'edit'; customer: Customer }
+  | { mode: 'delete'; customer: Customer }
+  | null
 
 export function CustomersPage() {
   const banking = useBanking()
@@ -54,7 +59,7 @@ export function CustomersPage() {
                   <RowActions
                     label={`${customer.firstName} ${customer.lastName}`}
                     onEdit={() => setDialog({ mode: 'edit', customer })}
-                    onDelete={() => banking.deleteCustomer(customer.id)}
+                    onDelete={() => setDialog({ mode: 'delete', customer })}
                   />
                 </td>
               </tr>
@@ -65,7 +70,7 @@ export function CustomersPage() {
 
       <Pagination page={page} pageCount={pageCount} onChange={setPage} />
 
-      {dialog && (
+      {dialog && dialog.mode !== 'delete' && (
         <Modal
           title={dialog.mode === 'edit' ? 'Edit customer' : 'New customer'}
           onClose={() => setDialog(null)}
@@ -77,6 +82,42 @@ export function CustomersPage() {
           />
         </Modal>
       )}
+
+      {dialog && dialog.mode === 'delete' && (() => {
+        const { customer } = dialog
+        const accounts = banking.accountsForCustomer(customer.id)
+        const name = `${customer.firstName} ${customer.lastName}`
+        const n = accounts.length
+
+        if (n === 0) {
+          return (
+            <ConfirmDialog
+              title="Delete customer"
+              message={`Delete ${name}? This cannot be undone.`}
+              confirmLabel="Delete"
+              onConfirm={() => {
+                banking.deleteCustomer(customer.id)
+                setDialog(null)
+              }}
+              onCancel={() => setDialog(null)}
+            />
+          )
+        }
+
+        const accountNumbers = accounts.map((account) => account.accountNumber).join(', ')
+        return (
+          <ConfirmDialog
+            title="Delete customer"
+            message={`${name} has ${n} account(s): ${accountNumbers}. Deleting the customer also deletes these accounts.`}
+            confirmLabel={`Delete customer and ${n} account(s)`}
+            onConfirm={() => {
+              banking.deleteCustomerWithAccounts(customer.id)
+              setDialog(null)
+            }}
+            onCancel={() => setDialog(null)}
+          />
+        )
+      })()}
     </>
   )
 }

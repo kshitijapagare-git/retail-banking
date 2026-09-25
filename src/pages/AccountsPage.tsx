@@ -3,12 +3,17 @@ import { AccountForm } from '../components/AccountForm'
 import { usePagination } from '../lib/usePagination'
 import { useBanking } from '../state/BankingContext'
 import type { Account, AccountDraft } from '../types'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { Modal } from '../ui/Modal'
 import { PageHeader } from '../ui/PageHeader'
 import { Pagination } from '../ui/Pagination'
 import { RowActions } from '../ui/RowActions'
 
-type Dialog = { mode: 'create' } | { mode: 'edit'; account: Account } | null
+type Dialog =
+  | { mode: 'create' }
+  | { mode: 'edit'; account: Account }
+  | { mode: 'delete'; account: Account }
+  | null
 
 export function AccountsPage() {
   const banking = useBanking()
@@ -56,7 +61,7 @@ export function AccountsPage() {
                     <RowActions
                       label={account.accountNumber}
                       onEdit={() => setDialog({ mode: 'edit', account })}
-                      onDelete={() => banking.deleteAccount(account.id)}
+                      onDelete={() => setDialog({ mode: 'delete', account })}
                     />
                   </td>
                 </tr>
@@ -68,7 +73,7 @@ export function AccountsPage() {
 
       <Pagination page={page} pageCount={pageCount} onChange={setPage} />
 
-      {dialog && (
+      {dialog && dialog.mode !== 'delete' && (
         <Modal title={dialog.mode === 'edit' ? 'Edit account' : 'New account'} onClose={() => setDialog(null)}>
           <AccountForm
             editing={dialog.mode === 'edit' ? dialog.account : null}
@@ -77,6 +82,19 @@ export function AccountsPage() {
             onCancel={() => setDialog(null)}
           />
         </Modal>
+      )}
+
+      {dialog && dialog.mode === 'delete' && (
+        <ConfirmDialog
+          title="Delete account"
+          message={`Delete account ${dialog.account.accountNumber}? This cannot be undone.`}
+          confirmLabel="Delete"
+          onConfirm={() => {
+            banking.deleteAccount(dialog.account.id)
+            setDialog(null)
+          }}
+          onCancel={() => setDialog(null)}
+        />
       )}
     </>
   )

@@ -70,6 +70,84 @@ describe('customers', () => {
   it('rejects deleting an unknown customer', () => {
     expect(() => store.deleteCustomer(store.emptyState(), 'cus_404')).toThrow(StoreError)
   })
+
+  it('rejects deleting a customer who still owns accounts', () => {
+    const { state, customerId } = withAda()
+    let next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+    next = store.createAccount(next, {
+      accountNumber: 'ACC-2',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+
+    expect(() => store.deleteCustomer(next, customerId)).toThrow(
+      'Customer Ada Lovelace still has 2 account(s)',
+    )
+  })
+
+  it('deleteCustomerWithAccounts removes the customer and only their accounts', () => {
+    const { state, customerId } = withAda()
+    const withGrace = store.createCustomer(state, GRACE)
+    const graceId = store.listCustomers(withGrace).find((c) => c.firstName === 'Grace')!.id
+
+    let next = store.createAccount(withGrace, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+    next = store.createAccount(next, {
+      accountNumber: 'ACC-2',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+    next = store.createAccount(next, {
+      accountNumber: 'ACC-3',
+      customerId: graceId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+
+    const after = store.deleteCustomerWithAccounts(next, customerId)
+
+    expect(store.getCustomer(after, customerId)).toBeUndefined()
+    expect(store.getCustomer(after, graceId)).toBeDefined()
+    expect(store.listAccounts(after).map((a) => a.accountNumber)).toEqual(['ACC-3'])
+  })
+
+  it('rejects deleteCustomerWithAccounts for an unknown customer', () => {
+    expect(() => store.deleteCustomerWithAccounts(store.emptyState(), 'cus_404')).toThrow(
+      StoreError,
+    )
+  })
+
+  it('accountsForCustomer returns accounts in insertion order', () => {
+    const { state, customerId } = withAda()
+    let next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+    next = store.createAccount(next, {
+      accountNumber: 'ACC-2',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+
+    expect(store.accountsForCustomer(next, customerId).map((a) => a.accountNumber)).toEqual([
+      'ACC-1',
+      'ACC-2',
+    ])
+  })
 })
 
 describe('accounts', () => {

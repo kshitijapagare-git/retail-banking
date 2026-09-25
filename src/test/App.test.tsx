@@ -99,8 +99,56 @@ describe('customers', () => {
     await addCustomer(user, ADA)
 
     await user.click(screen.getByRole('button', { name: 'Delete Ada Lovelace' }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(screen.getByText('No customers yet.')).toBeInTheDocument()
+  })
+
+  it('cancelling a customer delete keeps the row', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+
+    await user.click(screen.getByRole('button', { name: 'Delete Ada Lovelace' }))
+    expect(screen.getByRole('dialog', { name: 'Delete customer' })).toBeInTheDocument()
+    expect(screen.getByText('Delete Ada Lovelace? This cannot be undone.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(customerRow(/Ada Lovelace/)).toBeInTheDocument()
+  })
+
+  it('escape cancels a customer delete dialog', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+
+    await user.click(screen.getByRole('button', { name: 'Delete Ada Lovelace' }))
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(customerRow(/Ada Lovelace/)).toBeInTheDocument()
+  })
+
+  it('shows a cascade warning when deleting a customer with accounts, and confirming removes both', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await addAccount(user, ACC)
+    await addAccount(user, { ...ACC, accountNumber: 'ACC-1002' })
+    await gotoCustomers(user)
+
+    await user.click(screen.getByRole('button', { name: 'Delete Ada Lovelace' }))
+
+    expect(
+      screen.getByText('Ada Lovelace has 2 account(s): ACC-1001, ACC-1002. Deleting the customer also deletes these accounts.'),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete customer and 2 account(s)' }))
+
+    expect(screen.getByText('No customers yet.')).toBeInTheDocument()
+
+    await gotoAccounts(user)
+    expect(screen.getByText('No accounts yet.')).toBeInTheDocument()
   })
 })
 
@@ -171,7 +219,33 @@ describe('accounts', () => {
     await addAccount(user, ACC)
 
     await user.click(screen.getByRole('button', { name: 'Delete ACC-1001' }))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(screen.getByText('No accounts yet.')).toBeInTheDocument()
+  })
+
+  it('shows the account delete confirmation dialog', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await addAccount(user, ACC)
+
+    await user.click(screen.getByRole('button', { name: 'Delete ACC-1001' }))
+
+    expect(screen.getByRole('dialog', { name: 'Delete account' })).toBeInTheDocument()
+    expect(screen.getByText('Delete account ACC-1001? This cannot be undone.')).toBeInTheDocument()
+  })
+
+  it('escape cancels an account delete dialog', async () => {
+    const { user } = renderApp()
+    await addCustomer(user, ADA)
+    await gotoAccounts(user)
+    await addAccount(user, ACC)
+
+    await user.click(screen.getByRole('button', { name: 'Delete ACC-1001' }))
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(accountRow(/ACC-1001/)).toBeInTheDocument()
   })
 })
