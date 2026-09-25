@@ -1,5 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { App } from '../App'
+import { STORAGE_KEY } from '../data/persistence'
+import { BankingProvider } from '../state/BankingContext'
 import {
   ACC,
   ADA,
@@ -39,6 +42,32 @@ describe('shell', () => {
 
     await gotoAccounts(user)
     expect(screen.getByText('No accounts yet.')).toBeInTheDocument()
+  })
+
+  it('survives a remount by reloading data from storage', async () => {
+    const { user, unmount } = renderApp()
+    await addCustomer(user, ADA)
+    unmount()
+
+    render(
+      <BankingProvider>
+        <App />
+      </BankingProvider>,
+    )
+
+    expect(customerRow(/Ada Lovelace/)).toBeInTheDocument()
+  })
+
+  it('resets to an empty state when stored data is corrupt', () => {
+    localStorage.setItem(STORAGE_KEY, '{ not json')
+
+    render(
+      <BankingProvider>
+        <App />
+      </BankingProvider>,
+    )
+
+    expect(screen.getByText('No customers yet.')).toBeInTheDocument()
   })
 })
 

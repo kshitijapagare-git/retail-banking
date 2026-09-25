@@ -7,6 +7,7 @@ beforeEach(() => {
   resetIds()
   // The hash survives between tests in one file; reset so each starts on Customers.
   window.location.hash = ''
+  localStorage.clear()
 })
 
 afterEach(() => {

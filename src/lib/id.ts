@@ -11,3 +11,23 @@ export function nextId(prefix: string): string {
 export function resetIds(): void {
   counters.clear()
 }
+
+/**
+ * Advance each prefix's counter past the highest number seen in `ids`, so
+ * ids loaded from storage or an import never collide with newly generated ones.
+ * Ids that don't match the `prefix_number` pattern are ignored.
+ */
+export function seedIds(ids: string[]): void {
+  for (const id of ids) {
+    const separatorIndex = id.lastIndexOf('_')
+    if (separatorIndex === -1) continue
+
+    const prefix = id.slice(0, separatorIndex)
+    const suffix = id.slice(separatorIndex + 1)
+    if (!/^\d+$/.test(suffix)) continue
+
+    const number = Number(suffix)
+    const current = counters.get(prefix) ?? 0
+    counters.set(prefix, Math.max(current, number))
+  }
+}
