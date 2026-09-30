@@ -90,6 +90,7 @@ export function CustomersPage() {
         >
           <CustomerForm
             editing={dialog.mode === 'edit' ? dialog.customer : null}
+            customers={banking.customers}
             onSubmit={submit}
             onCancel={() => setDialog(null)}
           />

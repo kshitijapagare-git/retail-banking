@@ -81,6 +81,7 @@ export function AccountsPage() {
           <AccountForm
             editing={dialog.mode === 'edit' ? dialog.account : null}
             customers={banking.customers}
+            accounts={banking.accounts}
             onSubmit={submit}
             onCancel={() => setDialog(null)}
           />

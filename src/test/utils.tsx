@@ -72,3 +72,53 @@ export const ACC = {
   balance: '250.5',
   status: 'ACTIVE',
 }
+
+/* ---------- Additive helpers for validation tests ----------
+ * These are purely additive: they don't change the behavior of any
+ * existing exported helper above. They let tests drive the Customer/Account
+ * dialogs field-by-field (e.g. to submit blank/partial input, or to edit an
+ * existing record without retyping every field).
+ */
+
+export async function openAddCustomerDialog(user: User) {
+  await user.click(screen.getByRole('button', { name: '+ Add customer' }))
+}
+
+export async function openEditCustomerDialog(user: User, name: string) {
+  await user.click(screen.getByRole('button', { name: `Edit ${name}` }))
+}
+
+export async function fillCustomerForm(user: User, customer: Partial<typeof ADA>) {
+  if (customer.firstName !== undefined) await user.type(screen.getByLabelText('First name'), customer.firstName)
+  if (customer.lastName !== undefined) await user.type(screen.getByLabelText('Last name'), customer.lastName)
+  if (customer.email !== undefined) await user.type(screen.getByLabelText('Email'), customer.email)
+  if (customer.phone !== undefined) await user.type(screen.getByLabelText('Phone'), customer.phone)
+}
+
+export async function submitCustomerForm(user: User, label: 'Add customer' | 'Save customer' = 'Add customer') {
+  await user.click(screen.getByRole('button', { name: label }))
+}
+
+export async function openAddAccountDialog(user: User) {
+  await user.click(screen.getByRole('button', { name: '+ Add account' }))
+}
+
+export async function openEditAccountDialog(user: User, accountNumber: string) {
+  await user.click(screen.getByRole('button', { name: `Edit ${accountNumber}` }))
+}
+
+export async function fillAccountForm(
+  user: User,
+  account: Partial<{ accountNumber: string; customerName: string; balance: string; status: string }>,
+) {
+  if (account.accountNumber !== undefined)
+    await user.type(screen.getByLabelText('Account number'), account.accountNumber)
+  if (account.customerName !== undefined)
+    await user.selectOptions(screen.getByLabelText('Customer'), account.customerName)
+  if (account.balance !== undefined) await user.type(screen.getByLabelText('Balance'), account.balance)
+  if (account.status !== undefined) await user.type(screen.getByLabelText('Status'), account.status)
+}
+
+export async function submitAccountForm(user: User, label: 'Add account' | 'Save account' = 'Add account') {
+  await user.click(screen.getByRole('button', { name: label }))
+}
