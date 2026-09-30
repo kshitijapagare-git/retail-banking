@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { CustomerForm } from '../components/CustomerForm'
 import { usePagination } from '../lib/usePagination'
 import { useBanking } from '../state/BankingContext'
@@ -13,12 +14,29 @@ type Dialog = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null
 export function CustomersPage() {
   const banking = useBanking()
   const [dialog, setDialog] = useState<Dialog>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
   const { page, pageCount, visible, setPage } = usePagination(banking.customers)
 
   const submit = (draft: CustomerDraft) => {
     if (dialog?.mode === 'edit') banking.updateCustomer(dialog.customer.id, draft)
     else banking.createCustomer(draft)
     setDialog(null)
+  }
+
+  const deleteTargetAccountCount = deleteTarget
+    ? banking.accounts.filter((account) => account.customerId === deleteTarget.id).length
+    : 0
+
+  const confirmDeleteOnly = () => {
+    if (!deleteTarget) return
+    banking.deleteCustomer(deleteTarget.id)
+    setDeleteTarget(null)
+  }
+
+  const confirmDeleteCascade = () => {
+    if (!deleteTarget) return
+    banking.deleteCustomer(deleteTarget.id, { cascade: true })
+    setDeleteTarget(null)
   }
 
   return (
@@ -54,7 +72,7 @@ export function CustomersPage() {
                   <RowActions
                     label={`${customer.firstName} ${customer.lastName}`}
                     onEdit={() => setDialog({ mode: 'edit', customer })}
-                    onDelete={() => banking.deleteCustomer(customer.id)}
+                    onDelete={() => setDeleteTarget(customer)}
                   />
                 </td>
               </tr>
@@ -76,6 +94,27 @@ export function CustomersPage() {
             onCancel={() => setDialog(null)}
           />
         </Modal>
+      )}
+
+      {deleteTarget && deleteTargetAccountCount === 0 && (
+        <ConfirmDialog
+          title="Delete customer"
+          message={`Are you sure you want to delete ${deleteTarget.firstName} ${deleteTarget.lastName}? This cannot be undone.`}
+          actions={[{ label: 'Delete customer', onClick: confirmDeleteOnly }]}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {deleteTarget && deleteTargetAccountCount > 0 && (
+        <ConfirmDialog
+          title="Delete customer"
+          message={`This customer has ${deleteTargetAccountCount} account(s). Choose whether to delete the customer only or delete customer and all accounts.`}
+          actions={[
+            { label: 'Delete customer only', onClick: confirmDeleteOnly, disabled: true },
+            { label: 'Delete customer and all accounts', onClick: confirmDeleteCascade },
+          ]}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </>
   )

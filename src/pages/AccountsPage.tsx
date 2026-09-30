@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AccountForm } from '../components/AccountForm'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { usePagination } from '../lib/usePagination'
 import { useBanking } from '../state/BankingContext'
 import type { Account, AccountDraft } from '../types'
@@ -13,12 +14,19 @@ type Dialog = { mode: 'create' } | { mode: 'edit'; account: Account } | null
 export function AccountsPage() {
   const banking = useBanking()
   const [dialog, setDialog] = useState<Dialog>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
   const { page, pageCount, visible, setPage } = usePagination(banking.accounts)
 
   const submit = (draft: AccountDraft) => {
     if (dialog?.mode === 'edit') banking.updateAccount(dialog.account.id, draft)
     else banking.createAccount(draft)
     setDialog(null)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    banking.deleteAccount(deleteTarget.id)
+    setDeleteTarget(null)
   }
 
   return (
@@ -56,7 +64,7 @@ export function AccountsPage() {
                     <RowActions
                       label={account.accountNumber}
                       onEdit={() => setDialog({ mode: 'edit', account })}
-                      onDelete={() => banking.deleteAccount(account.id)}
+                      onDelete={() => setDeleteTarget(account)}
                     />
                   </td>
                 </tr>
@@ -77,6 +85,15 @@ export function AccountsPage() {
             onCancel={() => setDialog(null)}
           />
         </Modal>
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete account"
+          message={`Are you sure you want to delete account ${deleteTarget.accountNumber}? This cannot be undone.`}
+          actions={[{ label: 'Delete account', onClick: confirmDelete }]}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </>
   )

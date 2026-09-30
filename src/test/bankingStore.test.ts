@@ -70,6 +70,41 @@ describe('customers', () => {
   it('rejects deleting an unknown customer', () => {
     expect(() => store.deleteCustomer(store.emptyState(), 'cus_404')).toThrow(StoreError)
   })
+
+  it('rejects deleting a customer with accounts unless cascade is set', () => {
+    const { state, customerId } = withAda()
+    const next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+
+    expect(() => store.deleteCustomer(next, customerId)).toThrow(/1 account/)
+    expect(store.listCustomers(next)).toHaveLength(1)
+    expect(store.listAccounts(next)).toHaveLength(1)
+  })
+
+  it('cascades deleting a customer and all their accounts when cascade is true', () => {
+    const { state, customerId } = withAda()
+    let next = store.createAccount(state, {
+      accountNumber: 'ACC-1',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+    next = store.createAccount(next, {
+      accountNumber: 'ACC-2',
+      customerId,
+      balance: 0,
+      status: 'ACTIVE',
+    })
+
+    const after = store.deleteCustomer(next, customerId, { cascade: true })
+
+    expect(store.listCustomers(after)).toHaveLength(0)
+    expect(store.listAccounts(after)).toHaveLength(0)
+  })
 })
 
 describe('accounts', () => {

@@ -38,8 +38,19 @@ export function updateCustomer(state: BankingState, id: string, patch: Partial<C
   return { ...state, customers: repo.replace(state.customers, id, patch) }
 }
 
-export function deleteCustomer(state: BankingState, id: string): BankingState {
+export function deleteCustomer(state: BankingState, id: string, options?: { cascade?: boolean }): BankingState {
   requireCustomer(state, id)
+  const accounts = accountsForCustomer(state, id)
+  if (accounts.length > 0) {
+    if (!options?.cascade) {
+      throw new StoreError(
+        `Customer ${id} has ${accounts.length} account(s); pass { cascade: true } to delete them along with the customer`,
+      )
+    }
+    const accountIds = new Set(accounts.map((account) => account.id))
+    const remainingAccounts = state.accounts.filter((account) => !accountIds.has(account.id))
+    return { customers: repo.remove(state.customers, id), accounts: remainingAccounts }
+  }
   return { ...state, customers: repo.remove(state.customers, id) }
 }
 
@@ -82,4 +93,8 @@ function requireAccount(state: BankingState, id: string): Account {
   const account = repo.get(state.accounts, id)
   if (!account) throw new StoreError(`No account with id ${id}`)
   return account
+}
+
+function accountsForCustomer(state: BankingState, customerId: string): Account[] {
+  return repo.list(state.accounts).filter((account) => account.customerId === customerId)
 }

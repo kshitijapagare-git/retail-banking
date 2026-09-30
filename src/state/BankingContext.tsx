@@ -10,7 +10,7 @@ export interface BankingApi {
   getAccount: (id: string) => Account | undefined
   createCustomer: (draft: CustomerDraft) => void
   updateCustomer: (id: string, patch: Partial<CustomerDraft>) => void
-  deleteCustomer: (id: string) => void
+  deleteCustomer: (id: string, options?: { cascade?: boolean }) => void
   createAccount: (draft: AccountDraft) => void
   updateAccount: (id: string, patch: Partial<AccountDraft>) => void
   deleteAccount: (id: string) => void
@@ -35,7 +35,7 @@ export function BankingProvider({
       getAccount: (id) => store.getAccount(state, id),
       createCustomer: (draft) => setState((s) => store.createCustomer(s, draft)),
       updateCustomer: (id, patch) => setState((s) => store.updateCustomer(s, id, patch)),
-      deleteCustomer: (id) => setState((s) => store.deleteCustomer(s, id)),
+      deleteCustomer: (id, options) => setState((s) => store.deleteCustomer(s, id, options)),
       createAccount: (draft) => setState((s) => store.createAccount(s, draft)),
       updateAccount: (id, patch) => setState((s) => store.updateAccount(s, id, patch)),
       deleteAccount: (id) => setState((s) => store.deleteAccount(s, id)),
